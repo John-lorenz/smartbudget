@@ -1,0 +1,13 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://backend-beryl-seven-72ce1rm5yc.vercel.app/api/:path*"
+    },
+    {
+      "source": "/api",
+      "destination": "https://backend-beryl-seven-72ce1rm5yc.vercel.app/api"
+    },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
