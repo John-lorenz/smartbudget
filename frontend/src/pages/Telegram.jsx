@@ -209,12 +209,6 @@ export default function Telegram() {
           ))}
         </ul>
       </div>
-
-      <p className="text-xs text-gray-400 dark:text-gray-500 leading-relaxed">
-        Configure o bot no @BotFather e defina <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">TELEGRAM_BOT_TOKEN</code>
-        {' '}e <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">TELEGRAM_BOT_USERNAME</code> no backend.
-        Depois do deploy, acesse <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">/api/telegram/setup</code> uma vez para registrar o webhook.
-      </p>
     </div>
   );
 }
