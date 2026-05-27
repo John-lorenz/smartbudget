@@ -200,7 +200,8 @@ export default function Telegram() {
             <li
               key={cmd}
               className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 border-b border-gray-100 dark:border-gray-700 pb-3 last:border-0 last:pb-0"
-            >
+            > 
+              
               <code className="text-xs font-bold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/50 px-2 py-1 rounded-lg shrink-0">
                 {cmd}
               </code>
