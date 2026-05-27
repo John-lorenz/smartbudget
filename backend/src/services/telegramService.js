@@ -89,7 +89,14 @@ async function tryLinkAccount(chatId, text) {
   return [
     '✅ *Conta vinculada!*',
     '',
-    'Use o SmartBudget por aqui. Envie *ajuda* para ver os comandos.',
+    'Agora você pode registrar movimentações direto por aqui.',
+    '',
+    'Exemplos:',
+    '• gastei 45,90 no mercado',
+    '• recebi 3500 salario',
+    '• saldo',
+    '',
+    'Envie *ajuda* para ver todos os comandos.',
   ].join('\n');
 }
 
@@ -108,10 +115,18 @@ async function processUpdate(update) {
 
   if (/^\/start(?:@\w+)?$/i.test(text.trim())) {
     await sendTelegramMessage(chatId, [
-      'Olá! Sou o assistente do *SmartBudget*.',
+      'Olá! Eu sou o assistente do *SmartBudget*.',
       '',
-      'Para vincular sua conta, abra o app → *Telegram* → *Vincular Telegram*.',
-      'Depois toque em *Iniciar* no link que o app abrir.',
+      'Para começar:',
+      '1. Abra o app SmartBudget',
+      '2. Vá em *Telegram*',
+      '3. Toque em *Vincular Telegram*',
+      '4. Volte aqui pelo link que o app abrir',
+      '',
+      'Depois de vincular, você pode mandar mensagens como:',
+      '• gastei 45,90 no mercado',
+      '• recebi 3500 salario',
+      '• saldo',
     ].join('\n'));
     return;
   }
@@ -119,8 +134,10 @@ async function processUpdate(update) {
   const user = await findUserByChatId(chatId);
   if (!user) {
     await sendTelegramMessage(chatId, [
-      'Conta ainda não vinculada.',
-      'No app SmartBudget: Menu → *Telegram* → *Vincular Telegram*.',
+      'Ainda não encontrei sua conta SmartBudget vinculada a este Telegram.',
+      '',
+      'No app: Menu → *Telegram* → *Vincular Telegram*.',
+      'Depois toque em *Iniciar* no link aberto pelo app.',
     ].join('\n'));
     return;
   }

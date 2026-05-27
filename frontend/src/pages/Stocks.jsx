@@ -66,6 +66,14 @@ function mergeQuoteChanges(previous, incoming) {
   });
 }
 
+function getDisplayQuotePrice(quote, selectedCurrency, crypto = false) {
+  if (!quote) return null;
+  if (!crypto) return quote.price;
+
+  const key = selectedCurrency === 'usd' ? 'priceUsd' : 'priceBrl';
+  return quote[key] ?? quote.price ?? null;
+}
+
 function getTargetProgress(current, target) {
   if (!target || !current) return null;
   const currentNum = Number(current);
@@ -194,11 +202,12 @@ export default function Stocks() {
     all.forEach((asset) => {
       const quote = asset.quote;
       const change = Number(quote?.changePercent || 0);
+      const quotePrice = getDisplayQuotePrice(quote, currency, Boolean(asset.coin_id));
       if (quote?.changePercent !== null && quote?.changePercent !== undefined) {
         if (change >= 0) positive += 1;
         else negative += 1;
       }
-      const progress = getTargetProgress(quote?.price, asset.target_price);
+      const progress = getTargetProgress(quotePrice, asset.target_price);
       if (progress?.reached) targetsHit += 1;
     });
 
@@ -208,7 +217,7 @@ export default function Stocks() {
       positive,
       negative,
     };
-  }, [stocks, cryptos]);
+  }, [stocks, cryptos, currency]);
 
   const filteredAssets = useMemo(() => {
     const term = listSearch.trim().toUpperCase();
@@ -226,8 +235,8 @@ export default function Stocks() {
         return (a.symbol || '').localeCompare(b.symbol || '');
       }
       if (sortBy === 'target') {
-        const progA = getTargetProgress(a.quote?.price, a.target_price)?.progress ?? 0;
-        const progB = getTargetProgress(b.quote?.price, b.target_price)?.progress ?? 0;
+        const progA = getTargetProgress(getDisplayQuotePrice(a.quote, currency, isCrypto), a.target_price)?.progress ?? 0;
+        const progB = getTargetProgress(getDisplayQuotePrice(b.quote, currency, isCrypto), b.target_price)?.progress ?? 0;
         return progB - progA;
       }
       const changeA = Number(a.quote?.changePercent || 0);
@@ -236,7 +245,7 @@ export default function Stocks() {
     });
 
     return items;
-  }, [currentAssets, listSearch, sortBy]);
+  }, [currentAssets, listSearch, sortBy, currency, isCrypto]);
 
   function changeType(type) {
     setActiveType(type);
@@ -616,10 +625,11 @@ export default function Stocks() {
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
           {filteredAssets.map((asset) => {
             const quote = asset.quote;
+            const quotePrice = getDisplayQuotePrice(quote, currency, isCrypto);
             const change = Number(quote?.changePercent || 0);
             const isUp = change >= 0;
-            const targetInfo = getTargetProgress(quote?.price, asset.target_price);
-            const hasQuote = quote?.price !== null && quote?.price !== undefined;
+            const targetInfo = getTargetProgress(quotePrice, asset.target_price);
+            const hasQuote = quotePrice !== null && quotePrice !== undefined;
 
             return (
               <article
@@ -668,8 +678,8 @@ export default function Stocks() {
                       <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-0.5">Cotação</p>
                       <p className="sb-price-lg">
                         {formatQuotePrice(
-                          quote?.price,
-                          isCrypto ? (quote?.currency || displayCurrency) : (quote?.currency || 'BRL')
+                          quotePrice,
+                          isCrypto ? displayCurrency : (quote?.currency || 'BRL')
                         )}
                       </p>
                     </div>

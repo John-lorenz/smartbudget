@@ -43,6 +43,8 @@ async function fetchCryptoQuotes(coinIds, currency = 'brl') {
         symbol: id.toUpperCase(),
         name: id,
         price: quote[vs] ?? null,
+        priceBrl: quote.brl ?? null,
+        priceUsd: quote.usd ?? null,
         changePercent,
         currency: vs.toUpperCase(),
         updatedAt: new Date().toISOString(),

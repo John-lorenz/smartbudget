@@ -7,11 +7,14 @@ import { useAuth } from '../contexts/AuthContext';
 const LINKING_KEY = 'smartbudget_telegram_linking';
 
 const COMMANDS = [
-  { cmd: 'despesa 45,90 mercado', desc: 'Registra uma despesa hoje' },
-  { cmd: 'receita 3500 salario', desc: 'Registra uma receita' },
+  { cmd: 'gastei 45,90 no mercado', desc: 'Registra despesa com linguagem natural' },
+  { cmd: 'despesa 25 uber ontem', desc: 'Registra despesa em data anterior' },
+  { cmd: 'recebi 3500 salario', desc: 'Registra uma receita' },
   { cmd: 'meta viagem 10000', desc: 'Cria uma meta financeira' },
   { cmd: 'saldo', desc: 'Resumo do mês' },
-  { cmd: 'ajuda', desc: 'Lista todos os comandos' },
+  { cmd: 'hoje', desc: 'Resumo dos lançamentos de hoje' },
+  { cmd: 'extrato', desc: 'Mostra as 5 últimas transações' },
+  { cmd: 'desfazer', desc: 'Apaga a última transação registrada' },
 ];
 
 export default function Telegram() {
