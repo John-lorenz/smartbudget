@@ -1,14 +1,19 @@
-# SmartBudget - Sprint 1
+# SmartBudget - Sprint 2
 
 Sistema web para controle de gastos pessoais.  
 **Equipe:** Gabriel Tenfen, Lucas Francelino e João Arthur
 
-## Funcionalidades (Sprint 1)
+## Funcionalidades
 
 - **Cadastro de Usuário** — registro com nome, email e senha
 - **Login** — autenticação JWT com persistência de sessão
 - **Registrar Transação** — receitas e despesas com categorias, valor, data e descrição
 - **Criar Metas** — metas financeiras com valor alvo, valor atual, prazo e barra de progresso
+- **Recuperar Senha** — geração de código de recuperação e redefinição de senha
+- **Gerar Relatório** — resumo por período, categorias e compartilhamento via WhatsApp
+- **Indicadores na Tela Inicial** — saldo do mês, variação de gastos, maior gasto e taxa de economia
+- **Monitorar Ações** — lista de ações acompanhadas com preço alvo e cotação atual
+- **Monitorar Criptomoedas** — lista de criptos acompanhadas com preço alvo e cotação em reais
 
 ## Stack
 
@@ -63,6 +68,8 @@ O frontend já possui proxy configurado para o backend (`/api` → `localhost:30
 |--------|------------------|---------------------|------|
 | POST   | /api/auth/register | Cadastro de usuário | Não  |
 | POST   | /api/auth/login    | Login               | Não  |
+| POST   | /api/auth/forgot-password | Gerar código de recuperação | Não |
+| POST   | /api/auth/reset-password  | Redefinir senha com código | Não |
 | GET    | /api/auth/me       | Dados do usuário    | Sim  |
 
 ### Transações
@@ -70,6 +77,8 @@ O frontend já possui proxy configurado para o backend (`/api` → `localhost:30
 |--------|---------------------------|--------------------------|------|
 | GET    | /api/transactions         | Listar transações        | Sim  |
 | GET    | /api/transactions/summary | Resumo (receitas/despesas/saldo) | Sim  |
+| GET    | /api/transactions/indicators | Indicadores mensais | Sim |
+| GET    | /api/transactions/report  | Relatório por período | Sim |
 | POST   | /api/transactions         | Criar transação          | Sim  |
 | PUT    | /api/transactions/:id     | Editar transação         | Sim  |
 | DELETE | /api/transactions/:id     | Remover transação        | Sim  |
@@ -81,6 +90,22 @@ O frontend já possui proxy configurado para o backend (`/api` → `localhost:30
 | POST   | /api/goals       | Criar meta     | Sim  |
 | PUT    | /api/goals/:id   | Editar meta    | Sim  |
 | DELETE | /api/goals/:id   | Remover meta   | Sim  |
+
+### Ações
+| Método | Rota                  | Descrição              | Auth |
+|--------|-----------------------|------------------------|------|
+| GET    | /api/stocks           | Listar ações monitoradas | Sim |
+| POST   | /api/stocks           | Adicionar/atualizar ação | Sim |
+| GET    | /api/stocks/quote/:symbol | Buscar cotação atual | Sim |
+| DELETE | /api/stocks/:id       | Remover ação monitorada | Sim |
+
+### Criptomoedas
+| Método | Rota                  | Descrição              | Auth |
+|--------|-----------------------|------------------------|------|
+| GET    | /api/crypto           | Listar criptomoedas monitoradas | Sim |
+| POST   | /api/crypto           | Adicionar/atualizar criptomoeda | Sim |
+| GET    | /api/crypto/quote/:coinId | Buscar cotação atual | Sim |
+| DELETE | /api/crypto/:id       | Remover criptomoeda monitorada | Sim |
 
 ## Deploy na Vercel
 
@@ -120,7 +145,7 @@ Há **dois projetos** na Vercel (backend + frontend). **Quem usa o sistema só p
 ## Estrutura do Projeto
 
 ```
-Sprint1/
+Sprint2/
 ├── backend/
 │   ├── src/
 │   │   ├── config/         # Conexão com PostgreSQL
@@ -137,7 +162,7 @@ Sprint1/
 │   ├── src/
 │   │   ├── components/     # Layout com sidebar
 │   │   ├── contexts/       # AuthContext
-│   │   ├── pages/          # Login, Register, Dashboard, Transactions, Goals
+│   │   ├── pages/          # Login, Register, Dashboard, Transactions, Goals, Reports, Stocks
 │   │   ├── services/       # API client (axios)
 │   │   ├── App.jsx         # Rotas
 │   │   └── main.jsx        # Entry point

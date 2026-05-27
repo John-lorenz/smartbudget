@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { FiPlus, FiTrash2, FiEdit2, FiX, FiTarget, FiCalendar } from 'react-icons/fi';
 import toast from 'react-hot-toast';
+import DateField from '../components/DateField';
+import { displayDateToIso, formatDateForDisplay } from '../utils/date';
 
 export default function Goals() {
   const [goals, setGoals] = useState([]);
@@ -38,7 +40,7 @@ export default function Goals() {
         title: goal.title,
         target_amount: String(goal.target_amount),
         current_amount: String(goal.current_amount),
-        deadline: goal.deadline ? goal.deadline.split('T')[0] : '',
+        deadline: formatDateForDisplay(goal.deadline),
       });
     } else {
       setEditingId(null);
@@ -51,11 +53,19 @@ export default function Goals() {
     e.preventDefault();
     setSaving(true);
     try {
+      const deadline = form.deadline ? displayDateToIso(form.deadline) : null;
+
+      if (form.deadline && !deadline) {
+        toast.error('Informe o prazo no formato DD/MM/AAAA');
+        setSaving(false);
+        return;
+      }
+
       const data = {
         ...form,
         target_amount: Number(form.target_amount),
         current_amount: Number(form.current_amount) || 0,
-        deadline: form.deadline || null,
+        deadline,
       };
 
       if (editingId) {
@@ -104,8 +114,8 @@ export default function Goals() {
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Metas Financeiras</h1>
-          <p className="text-gray-400 text-sm mt-1">Acompanhe seu progresso rumo aos seus objetivos</p>
+          <h1 className="sb-title">Metas Financeiras</h1>
+          <p className="sb-subtitle mt-1">Acompanhe seu progresso rumo aos seus objetivos</p>
         </div>
         <button
           onClick={() => openModal()}
@@ -116,12 +126,12 @@ export default function Goals() {
       </div>
 
       {goals.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 p-14 text-center shadow-sm">
-          <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-            <FiTarget className="text-gray-300" size={28} />
+        <div className="sb-card p-14 text-center shadow-sm">
+          <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center mx-auto mb-4">
+            <FiTarget className="text-gray-300 dark:text-gray-600" size={28} />
           </div>
           <p className="text-gray-500 font-medium mb-1">Nenhuma meta criada ainda</p>
-          <p className="text-gray-400 text-sm mb-4">Defina objetivos financeiros e acompanhe seu progresso</p>
+          <p className="sb-subtitle mb-4">Defina objetivos financeiros e acompanhe seu progresso</p>
           <button
             onClick={() => openModal()}
             className="inline-flex items-center gap-2 text-emerald-600 font-semibold text-sm hover:text-emerald-700 cursor-pointer"
@@ -137,18 +147,18 @@ export default function Goals() {
             const deadlinePassed = g.deadline && new Date(g.deadline) < new Date();
 
             return (
-              <div key={g.id} className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-shadow">
+              <div key={g.id} className="sb-card p-6 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-start justify-between mb-5">
                   <div className="flex items-center gap-3">
                     <div className={`p-2.5 rounded-xl ${isComplete ? 'bg-green-50' : 'bg-gradient-to-br from-emerald-50 to-teal-50'}`}>
                       <FiTarget className={isComplete ? 'text-green-600' : 'text-emerald-600'} size={20} />
                     </div>
                     <div>
-                      <h3 className="font-bold text-gray-800">{g.title}</h3>
+                      <h3 className="font-bold text-gray-800 dark:text-gray-100">{g.title}</h3>
                       {g.deadline && (
                         <div className={`flex items-center gap-1 mt-0.5 text-[11px] font-medium ${deadlinePassed && !isComplete ? 'text-red-500' : 'text-gray-400'}`}>
                           <FiCalendar size={10} />
-                          {new Date(g.deadline).toLocaleDateString('pt-BR')}
+                          {formatDateForDisplay(g.deadline)}
                         </div>
                       )}
                     </div>
@@ -176,7 +186,7 @@ export default function Goals() {
                       {progress.toFixed(0)}%
                     </span>
                   </div>
-                  <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                  <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
                     <div
                       className={`h-3 rounded-full transition-all duration-500 ${isComplete ? 'bg-gradient-to-r from-green-400 to-green-500' : 'bg-gradient-to-r from-emerald-400 to-teal-500'}`}
                       style={{ width: `${progress}%` }}
@@ -186,16 +196,16 @@ export default function Goals() {
 
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-400">
-                    Atual: <span className="font-bold text-gray-700">{formatCurrency(g.current_amount)}</span>
+                    Atual: <span className="font-bold text-gray-700 dark:text-gray-200">{formatCurrency(g.current_amount)}</span>
                   </span>
                   <span className="text-gray-400">
-                    Meta: <span className="font-bold text-gray-700">{formatCurrency(g.target_amount)}</span>
+                    Meta: <span className="font-bold text-gray-700 dark:text-gray-200">{formatCurrency(g.target_amount)}</span>
                   </span>
                 </div>
 
                 {isComplete && (
-                  <div className="mt-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl px-4 py-2.5 text-center">
-                    <span className="text-sm font-bold text-green-700">Meta alcançada!</span>
+                  <div className="mt-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/40 dark:to-emerald-950/40 border border-green-200 dark:border-green-800 rounded-xl px-4 py-2.5 text-center">
+                    <span className="text-sm font-bold text-green-700 dark:text-green-400">Meta alcançada!</span>
                   </div>
                 )}
               </div>
@@ -206,10 +216,10 @@ export default function Goals() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-[fadeIn_0.15s_ease-out]">
-            <div className="flex items-center justify-between p-6 border-b border-gray-100">
-              <h2 className="text-lg font-bold text-gray-800">
+        <div className="sb-modal-overlay">
+          <div className="sb-modal animate-[fadeIn_0.15s_ease-out]">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-700">
+              <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">
                 {editingId ? 'Editar meta' : 'Nova meta'}
               </h2>
               <button onClick={() => setShowModal(false)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all cursor-pointer">
@@ -219,19 +229,19 @@ export default function Goals() {
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Título da meta</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">Título da meta</label>
                 <input
                   type="text"
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
                   placeholder="Ex: Viagem de férias"
                   required
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none text-sm bg-gray-50/50 focus:bg-white transition-all"
+                  className="sb-input"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Valor alvo (R$)</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">Valor alvo (R$)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -240,12 +250,12 @@ export default function Goals() {
                   onChange={(e) => setForm({ ...form, target_amount: e.target.value })}
                   placeholder="5000,00"
                   required
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none text-sm bg-gray-50/50 focus:bg-white transition-all"
+                  className="sb-input"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Valor atual (R$)</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">Valor atual (R$)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -253,19 +263,15 @@ export default function Goals() {
                   value={form.current_amount}
                   onChange={(e) => setForm({ ...form, current_amount: e.target.value })}
                   placeholder="0,00"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none text-sm bg-gray-50/50 focus:bg-white transition-all"
+                  className="sb-input"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Prazo (opcional)</label>
-                <input
-                  type="date"
-                  value={form.deadline}
-                  onChange={(e) => setForm({ ...form, deadline: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none text-sm bg-gray-50/50 focus:bg-white transition-all"
-                />
-              </div>
+              <DateField
+                label="Prazo (opcional)"
+                value={form.deadline}
+                onChange={(deadline) => setForm({ ...form, deadline })}
+              />
 
               <button
                 type="submit"

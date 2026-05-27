@@ -1,13 +1,17 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { FiHome, FiDollarSign, FiTarget, FiLogOut, FiMenu, FiX } from 'react-icons/fi';
+import { FiHome, FiDollarSign, FiTarget, FiLogOut, FiMenu, FiX, FiBarChart2, FiActivity, FiSend } from 'react-icons/fi';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
+import ThemeToggle from './ThemeToggle';
 
 const navItems = [
   { path: '/dashboard', label: 'Início', icon: FiHome },
   { path: '/transactions', label: 'Transações', icon: FiDollarSign },
   { path: '/goals', label: 'Metas', icon: FiTarget },
+  { path: '/reports', label: 'Relatórios', icon: FiBarChart2 },
+  { path: '/stocks', label: 'Investimentos', icon: FiActivity },
+  { path: '/telegram', label: 'Telegram', icon: FiSend },
 ];
 
 export default function Layout({ children }) {
@@ -30,22 +34,22 @@ export default function Layout({ children }) {
     .toUpperCase() || '?';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-emerald-50/30">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-emerald-50/30 dark:from-gray-950 dark:to-gray-900">
       {/* Sidebar desktop */}
-      <aside className="hidden md:flex fixed inset-y-0 left-0 w-64 bg-white/80 backdrop-blur-xl border-r border-gray-200/60 flex-col z-30">
-        <div className="p-6 border-b border-gray-200/60">
+      <aside className="hidden md:flex fixed inset-y-0 left-0 w-64 bg-white/80 backdrop-blur-xl border-r border-gray-200/60 dark:bg-gray-900/95 dark:border-gray-800 flex-col z-30">
+        <div className="p-6 border-b border-gray-200/60 dark:border-gray-800">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/25">
               <span className="text-white font-bold text-sm">SB</span>
             </div>
             <div>
-              <h1 className="text-lg font-bold text-gray-800 tracking-tight">SmartBudget</h1>
+              <h1 className="text-lg font-bold text-gray-800 dark:text-gray-100 tracking-tight">SmartBudget</h1>
             </div>
           </div>
         </div>
 
         <nav className="flex-1 p-3 space-y-0.5 mt-2">
-          {navItems.map(({ path, label, icon: Icon }) => {
+          {navItems.map(({ path, label, icon }) => {
             const active = location.pathname === path;
             return (
               <Link
@@ -54,29 +58,30 @@ export default function Layout({ children }) {
                 className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-200 ${
                   active
                     ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md shadow-emerald-500/25'
-                    : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'
+                    : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100'
                 }`}
               >
-                <Icon size={18} />
+                {icon({ size: 18 })}
                 {label}
               </Link>
             );
           })}
         </nav>
 
-        <div className="p-3 border-t border-gray-200/60">
-          <div className="flex items-center gap-3 px-3 py-2 mb-2">
+        <div className="p-3 border-t border-gray-200/60 dark:border-gray-800 space-y-2">
+          <ThemeToggle className="w-full justify-center" />
+          <div className="flex items-center gap-3 px-3 py-2">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
               <span className="text-white text-xs font-bold">{initials}</span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-700 truncate">{user?.name}</p>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">{user?.name}</p>
               <p className="text-[11px] text-gray-400 truncate">{user?.email}</p>
             </div>
           </div>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-2.5 w-full rounded-xl text-[13px] font-semibold text-gray-500 hover:bg-red-50 hover:text-red-600 transition-all duration-200 cursor-pointer"
+            className="flex items-center gap-3 px-4 py-2.5 w-full rounded-xl text-[13px] font-semibold text-gray-500 hover:bg-red-50 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-950/50 dark:hover:text-red-400 transition-all duration-200 cursor-pointer"
           >
             <FiLogOut size={18} />
             Sair
@@ -85,36 +90,42 @@ export default function Layout({ children }) {
       </aside>
 
       {/* Mobile header */}
-      <header className="md:hidden sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-gray-200/60 px-4 py-3 flex items-center justify-between">
+      <header className="md:hidden sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-gray-200/60 dark:bg-gray-900/95 dark:border-gray-800 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
             <span className="text-white font-bold text-xs">SB</span>
           </div>
-          <h1 className="text-lg font-bold text-gray-800 tracking-tight">SmartBudget</h1>
+          <h1 className="text-lg font-bold text-gray-800 dark:text-gray-100 tracking-tight">SmartBudget</h1>
         </div>
-        <button onClick={() => setMobileOpen(!mobileOpen)} className="p-2 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
-          {mobileOpen ? <FiX size={22} /> : <FiMenu size={22} />}
-        </button>
+        <div className="flex items-center gap-1">
+          <ThemeToggle className="!px-2" />
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 transition-colors cursor-pointer"
+          >
+            {mobileOpen ? <FiX size={22} /> : <FiMenu size={22} />}
+          </button>
+        </div>
       </header>
 
       {/* Mobile menu overlay */}
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={() => setMobileOpen(false)}>
           <div
-            className="absolute right-0 top-0 h-full w-72 bg-white shadow-2xl p-5 animate-[slideIn_0.2s_ease-out]"
+            className="absolute right-0 top-0 h-full w-72 bg-white dark:bg-gray-900 shadow-2xl p-5 animate-[slideIn_0.2s_ease-out]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center gap-3 mb-8 pb-4 border-b border-gray-100">
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-gray-800">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
                 <span className="text-white text-sm font-bold">{initials}</span>
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-800">{user?.name}</p>
+                <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{user?.name}</p>
                 <p className="text-xs text-gray-400">{user?.email}</p>
               </div>
             </div>
             <nav className="space-y-1">
-              {navItems.map(({ path, label, icon: Icon }) => {
+              {navItems.map(({ path, label, icon }) => {
                 const active = location.pathname === path;
                 return (
                   <Link
@@ -124,29 +135,32 @@ export default function Layout({ children }) {
                     className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
                       active
                         ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md'
-                        : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+                        : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100'
                     }`}
                   >
-                    <Icon size={18} />
+                    {icon({ size: 18 })}
                     {label}
                   </Link>
                 );
               })}
             </nav>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-3 px-4 py-3 mt-8 w-full rounded-xl text-sm font-semibold text-gray-500 hover:bg-red-50 hover:text-red-600 transition-all cursor-pointer"
-            >
-              <FiLogOut size={18} />
-              Sair
-            </button>
+            <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
+              <ThemeToggle className="w-full justify-center mb-3" />
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-sm font-semibold text-gray-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/50 dark:hover:text-red-400 transition-all cursor-pointer"
+              >
+                <FiLogOut size={18} />
+                Sair
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {/* Main content */}
       <main className="md:ml-64 min-h-screen">
-        <div className="max-w-5xl mx-auto p-5 md:p-8">
+        <div className="max-w-5xl mx-auto p-5 md:p-8 min-w-0 overflow-visible text-gray-900 dark:text-gray-100">
           {children}
         </div>
       </main>

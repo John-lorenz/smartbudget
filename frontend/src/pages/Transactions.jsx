@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { FiPlus, FiTrash2, FiEdit2, FiX, FiFilter, FiDollarSign } from 'react-icons/fi';
 import toast from 'react-hot-toast';
+import DateField from '../components/DateField';
+import { displayDateToIso, formatDateForDisplay, getTodayDisplayDate } from '../utils/date';
 
 const CATEGORIES = [
   'Alimentação', 'Transporte', 'Moradia', 'Saúde', 'Educação',
@@ -20,7 +22,7 @@ export default function Transactions() {
     amount: '',
     category: '',
     description: '',
-    date: new Date().toISOString().split('T')[0],
+    date: getTodayDisplayDate(),
   });
 
   useEffect(() => {
@@ -48,7 +50,7 @@ export default function Transactions() {
         amount: String(transaction.amount),
         category: transaction.category,
         description: transaction.description || '',
-        date: transaction.date.split('T')[0],
+        date: formatDateForDisplay(transaction.date),
       });
     } else {
       setEditingId(null);
@@ -57,7 +59,7 @@ export default function Transactions() {
         amount: '',
         category: '',
         description: '',
-        date: new Date().toISOString().split('T')[0],
+        date: getTodayDisplayDate(),
       });
     }
     setShowModal(true);
@@ -67,7 +69,15 @@ export default function Transactions() {
     e.preventDefault();
     setSaving(true);
     try {
-      const data = { ...form, amount: Number(form.amount) };
+      const isoDate = displayDateToIso(form.date);
+
+      if (!isoDate) {
+        toast.error('Informe a data no formato DD/MM/AAAA');
+        setSaving(false);
+        return;
+      }
+
+      const data = { ...form, amount: Number(form.amount), date: isoDate };
       if (editingId) {
         await api.put(`/transactions/${editingId}`, data);
         toast.success('Transação atualizada!');
@@ -114,8 +124,8 @@ export default function Transactions() {
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Transações</h1>
-          <p className="text-gray-400 text-sm mt-1">Gerencie suas receitas e despesas</p>
+          <h1 className="sb-title">Transações</h1>
+          <p className="sb-subtitle mt-1">Gerencie suas receitas e despesas</p>
         </div>
         <button
           onClick={() => openModal()}
@@ -128,7 +138,7 @@ export default function Transactions() {
       {/* Filtros */}
       <div className="flex items-center gap-2 mb-5">
         <FiFilter size={14} className="text-gray-400" />
-        <div className="flex bg-gray-100 rounded-xl p-0.5">
+        <div className="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-0.5">
           {[
             { value: '', label: 'Todas' },
             { value: 'receita', label: 'Receitas' },
@@ -139,8 +149,8 @@ export default function Transactions() {
               onClick={() => setFilterType(opt.value)}
               className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 filterType === opt.value
-                  ? 'bg-white text-gray-800 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'sb-tab-active'
+                  : 'sb-tab-inactive'
               }`}
             >
               {opt.label}
@@ -151,12 +161,12 @@ export default function Transactions() {
 
       {/* Lista */}
       {transactions.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 p-14 text-center shadow-sm">
-          <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-            <FiDollarSign className="text-gray-300" size={28} />
+        <div className="sb-card p-14 text-center shadow-sm">
+          <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center mx-auto mb-4">
+            <FiDollarSign className="text-gray-300 dark:text-gray-600" size={28} />
           </div>
           <p className="text-gray-500 font-medium mb-1">Nenhuma transação encontrada</p>
-          <p className="text-gray-400 text-sm mb-4">Comece registrando sua primeira transação</p>
+          <p className="sb-subtitle mb-4">Comece registrando sua primeira transação</p>
           <button
             onClick={() => openModal()}
             className="inline-flex items-center gap-2 text-emerald-600 font-semibold text-sm hover:text-emerald-700 cursor-pointer"
@@ -165,9 +175,9 @@ export default function Transactions() {
           </button>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+        <div className="sb-table-wrap">
           {/* Header da tabela - desktop */}
-          <div className="hidden sm:grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50/80 border-b border-gray-100 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+          <div className="hidden sm:grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50/80 dark:bg-gray-900/80 border-b border-gray-100 dark:border-gray-700 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
             <div className="col-span-1">Tipo</div>
             <div className="col-span-3">Descrição</div>
             <div className="col-span-2">Categoria</div>
@@ -179,19 +189,19 @@ export default function Transactions() {
           {transactions.map((t) => (
             <div
               key={t.id}
-              className="grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-4 px-6 py-3.5 border-b border-gray-50 last:border-0 hover:bg-gray-50/50 items-center transition-colors"
+              className="grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-4 px-6 py-3.5 border-b border-gray-50 dark:border-gray-700/80 last:border-0 sb-row-hover items-center"
             >
               <div className="sm:col-span-1">
                 <span className={`inline-block w-2.5 h-2.5 rounded-full ${t.type === 'receita' ? 'bg-green-400' : 'bg-red-400'}`}></span>
               </div>
               <div className="sm:col-span-3">
-                <p className="text-sm font-medium text-gray-700">{t.description || '-'}</p>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{t.description || '-'}</p>
               </div>
               <div className="sm:col-span-2">
-                <span className="text-[11px] font-semibold bg-gray-100 text-gray-500 px-2.5 py-1 rounded-lg">{t.category}</span>
+                <span className="text-[11px] font-semibold bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 px-2.5 py-1 rounded-lg">{t.category}</span>
               </div>
               <div className="sm:col-span-2 text-sm text-gray-400">
-                {new Date(t.date).toLocaleDateString('pt-BR')}
+                {formatDateForDisplay(t.date)}
               </div>
               <div className={`sm:col-span-2 text-sm font-bold text-right ${t.type === 'receita' ? 'text-green-600' : 'text-red-500'}`}>
                 {t.type === 'receita' ? '+' : '-'}{formatCurrency(t.amount)}
@@ -217,20 +227,20 @@ export default function Transactions() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-[fadeIn_0.15s_ease-out]">
-            <div className="flex items-center justify-between p-6 border-b border-gray-100">
-              <h2 className="text-lg font-bold text-gray-800">
+        <div className="sb-modal-overlay">
+          <div className="sb-modal animate-[fadeIn_0.15s_ease-out]">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-700">
+              <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">
                 {editingId ? 'Editar transação' : 'Nova transação'}
               </h2>
-              <button onClick={() => setShowModal(false)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all cursor-pointer">
+              <button onClick={() => setShowModal(false)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all cursor-pointer">
                 <FiX size={18} />
               </button>
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Tipo</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Tipo</label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
@@ -238,7 +248,7 @@ export default function Transactions() {
                     className={`py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
                       form.type === 'despesa'
                         ? 'bg-red-50 text-red-600 ring-2 ring-red-200'
-                        : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                        : 'bg-gray-50 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                     }`}
                   >
                     Despesa
@@ -249,7 +259,7 @@ export default function Transactions() {
                     className={`py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
                       form.type === 'receita'
                         ? 'bg-green-50 text-green-600 ring-2 ring-green-200'
-                        : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                        : 'bg-gray-50 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                     }`}
                   >
                     Receita
@@ -258,7 +268,7 @@ export default function Transactions() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Valor (R$)</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">Valor (R$)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -267,17 +277,17 @@ export default function Transactions() {
                   onChange={(e) => setForm({ ...form, amount: e.target.value })}
                   placeholder="0,00"
                   required
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none text-sm bg-gray-50/50 focus:bg-white transition-all"
+                  className="sb-input"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Categoria</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">Categoria</label>
                 <select
                   value={form.category}
                   onChange={(e) => setForm({ ...form, category: e.target.value })}
                   required
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none text-sm bg-gray-50/50 focus:bg-white transition-all"
+                  className="sb-input"
                 >
                   <option value="">Selecione...</option>
                   {CATEGORIES.map((c) => (
@@ -287,26 +297,22 @@ export default function Transactions() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Descrição (opcional)</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">Descrição (opcional)</label>
                 <input
                   type="text"
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   placeholder="Ex: Almoço no restaurante"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none text-sm bg-gray-50/50 focus:bg-white transition-all"
+                  className="sb-input"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Data</label>
-                <input
-                  type="date"
-                  value={form.date}
-                  onChange={(e) => setForm({ ...form, date: e.target.value })}
-                  required
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none text-sm bg-gray-50/50 focus:bg-white transition-all"
-                />
-              </div>
+              <DateField
+                label="Data"
+                value={form.date}
+                onChange={(date) => setForm({ ...form, date })}
+                required
+              />
 
               <button
                 type="submit"

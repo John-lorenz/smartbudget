@@ -1,5 +1,23 @@
 const pool = require('../config/database');
 
+function buildPeriodWhere(userId, startDate, endDate) {
+  let where = 'WHERE user_id = $1';
+  const params = [userId];
+  let paramIndex = 2;
+
+  if (startDate) {
+    where += ` AND date >= $${paramIndex++}`;
+    params.push(startDate);
+  }
+
+  if (endDate) {
+    where += ` AND date <= $${paramIndex++}`;
+    params.push(endDate);
+  }
+
+  return { where, params };
+}
+
 exports.create = async (req, res) => {
   try {
     const { type, amount, category, description, date } = req.body;
@@ -157,6 +175,121 @@ exports.summary = async (req, res) => {
     return res.json(result.rows[0]);
   } catch (err) {
     console.error('Erro ao buscar resumo:', err);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+exports.indicators = async (req, res) => {
+  try {
+    const [currentMonth, previousMonth, topCategory] = await Promise.all([
+      pool.query(
+        `SELECT
+           COALESCE(SUM(CASE WHEN type = 'receita' THEN amount ELSE 0 END), 0) AS receitas,
+           COALESCE(SUM(CASE WHEN type = 'despesa' THEN amount ELSE 0 END), 0) AS despesas,
+           COALESCE(SUM(CASE WHEN type = 'receita' THEN amount ELSE -amount END), 0) AS saldo
+         FROM transactions
+         WHERE user_id = $1
+           AND date >= date_trunc('month', CURRENT_DATE)
+           AND date < date_trunc('month', CURRENT_DATE) + INTERVAL '1 month'`,
+        [req.userId]
+      ),
+      pool.query(
+        `SELECT
+           COALESCE(SUM(CASE WHEN type = 'receita' THEN amount ELSE 0 END), 0) AS receitas,
+           COALESCE(SUM(CASE WHEN type = 'despesa' THEN amount ELSE 0 END), 0) AS despesas,
+           COALESCE(SUM(CASE WHEN type = 'receita' THEN amount ELSE -amount END), 0) AS saldo
+         FROM transactions
+         WHERE user_id = $1
+           AND date >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month'
+           AND date < date_trunc('month', CURRENT_DATE)`,
+        [req.userId]
+      ),
+      pool.query(
+        `SELECT category, COALESCE(SUM(amount), 0) AS total
+         FROM transactions
+         WHERE user_id = $1
+           AND type = 'despesa'
+           AND date >= date_trunc('month', CURRENT_DATE)
+           AND date < date_trunc('month', CURRENT_DATE) + INTERVAL '1 month'
+         GROUP BY category
+         ORDER BY total DESC
+         LIMIT 1`,
+        [req.userId]
+      ),
+    ]);
+
+    const current = currentMonth.rows[0];
+    const previous = previousMonth.rows[0];
+    const currentExpenses = Number(current.despesas);
+    const previousExpenses = Number(previous.despesas);
+    const currentIncome = Number(current.receitas);
+
+    const expenseVariation = previousExpenses > 0
+      ? ((currentExpenses - previousExpenses) / previousExpenses) * 100
+      : null;
+    const savingsRate = currentIncome > 0
+      ? (Number(current.saldo) / currentIncome) * 100
+      : 0;
+
+    return res.json({
+      currentMonth: current,
+      previousMonth: previous,
+      expenseVariation,
+      savingsRate,
+      topExpenseCategory: topCategory.rows[0] || null,
+    });
+  } catch (err) {
+    console.error('Erro ao buscar indicadores:', err);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+exports.report = async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    const { where, params } = buildPeriodWhere(req.userId, startDate, endDate);
+
+    const [totals, byCategory, byMonth] = await Promise.all([
+      pool.query(
+        `SELECT
+           COUNT(*) AS total_transacoes,
+           COALESCE(SUM(CASE WHEN type = 'receita' THEN amount ELSE 0 END), 0) AS total_receitas,
+           COALESCE(SUM(CASE WHEN type = 'despesa' THEN amount ELSE 0 END), 0) AS total_despesas,
+           COALESCE(SUM(CASE WHEN type = 'receita' THEN amount ELSE -amount END), 0) AS saldo
+         FROM transactions
+         ${where}`,
+        params
+      ),
+      pool.query(
+        `SELECT type, category, COALESCE(SUM(amount), 0) AS total, COUNT(*) AS quantidade
+         FROM transactions
+         ${where}
+         GROUP BY type, category
+         ORDER BY type, total DESC`,
+        params
+      ),
+      pool.query(
+        `SELECT
+           to_char(date_trunc('month', date), 'YYYY-MM') AS month,
+           COALESCE(SUM(CASE WHEN type = 'receita' THEN amount ELSE 0 END), 0) AS receitas,
+           COALESCE(SUM(CASE WHEN type = 'despesa' THEN amount ELSE 0 END), 0) AS despesas,
+           COALESCE(SUM(CASE WHEN type = 'receita' THEN amount ELSE -amount END), 0) AS saldo
+         FROM transactions
+         ${where}
+         GROUP BY date_trunc('month', date)
+         ORDER BY month ASC`,
+        params
+      ),
+    ]);
+
+    return res.json({
+      filters: { startDate: startDate || null, endDate: endDate || null },
+      totals: totals.rows[0],
+      byCategory: byCategory.rows,
+      byMonth: byMonth.rows,
+    });
+  } catch (err) {
+    console.error('Erro ao gerar relatório:', err);
     return res.status(500).json({ error: 'Erro interno do servidor' });
   }
 };
