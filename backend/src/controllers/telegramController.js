@@ -1,8 +1,6 @@
 const { processUpdate, registerWebhook } = require('../services/telegramService');
 
 exports.webhook = async (req, res) => {
-  res.sendStatus(200);
-
   try {
     if (req.body) {
       await processUpdate(req.body);
@@ -10,6 +8,7 @@ exports.webhook = async (req, res) => {
   } catch (err) {
     console.error('Erro no webhook Telegram:', err);
   }
+  res.sendStatus(200);
 };
 
 exports.setupWebhook = async (req, res) => {

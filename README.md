@@ -3,6 +3,12 @@
 Sistema web para controle de gastos pessoais.  
 **Equipe:** Gabriel Tenfen, Lucas Francelino e João Arthur
 
+## Acesse o projeto
+
+**Aplicação online:** https://smartbudget-one-delta-fxsnlkg38d.vercel.app
+
+Basta abrir o link, cadastrar uma conta e começar a usar. Funciona no navegador do celular e do computador.
+
 ## Funcionalidades
 
 - **Cadastro de Usuário** — registro com nome, email e senha
@@ -113,7 +119,7 @@ Há **dois projetos** na Vercel (backend + frontend). **Quem usa o sistema só p
 
 ### URLs de produção (exemplo deste time)
 
-- **App (use esta no celular / navegador):** [https://frontend-one-delta-fxsnlkg38d.vercel.app](https://frontend-one-delta-fxsnlkg38d.vercel.app)
+- **App (use esta no celular / navegador):** [https://smartbudget-one-delta-fxsnlkg38d.vercel.app](https://smartbudget-one-delta-fxsnlkg38d.vercel.app)
 - **API (interna):** `https://backend-beryl-seven-72ce1rm5yc.vercel.app` — não precisa abrir no navegador; o app chama `/api/...` no frontend.
 
 ### Deixar o link “mais bonito” (.vercel.app mais curto)

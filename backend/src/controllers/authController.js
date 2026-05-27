@@ -4,6 +4,8 @@ const jwt = require('jsonwebtoken');
 const pool = require('../config/database');
 const { clientMessageForDbError } = require('../utils/dbErrors');
 const { normalizeWhatsAppPhone } = require('../utils/phone');
+const { sendTelegramMessage } = require('../services/telegramService');
+const { sendEmail, buildResetPasswordEmail, isEmailConfigured } = require('../services/mailService');
 
 function generateToken(userId) {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -71,18 +73,28 @@ exports.forgotPassword = async (req, res) => {
   try {
     const emailRaw = req.body.email;
     const email = typeof emailRaw === 'string' ? emailRaw.trim().toLowerCase() : '';
+    // Preferência opcional vinda da UI: 'telegram' | 'email'
+    const preferRaw = typeof req.body.prefer === 'string' ? req.body.prefer.toLowerCase() : '';
+    const preferred = ['telegram', 'email'].includes(preferRaw) ? preferRaw : null;
 
     if (!email) {
       return res.status(400).json({ error: 'E-mail é obrigatório' });
     }
 
-    const userResult = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+    const userResult = await pool.query(
+      'SELECT id, name, email, telegram_chat_id FROM users WHERE email = $1',
+      [email]
+    );
     if (userResult.rows.length === 0) {
-      return res.json({ message: 'Se o e-mail estiver cadastrado, um código de recuperação será gerado.' });
+      return res.json({
+        message: 'Se o e-mail estiver cadastrado, um código de recuperação será gerado.',
+        deliveredVia: 'none',
+      });
     }
 
     const user = userResult.rows[0];
-    const resetToken = crypto.randomBytes(24).toString('hex');
+    // Código curto e amigável: 8 caracteres alfanuméricos
+    const resetToken = crypto.randomBytes(4).toString('hex').toUpperCase();
     const tokenHash = hashResetToken(resetToken);
     const expiresAt = new Date(Date.now() + 1000 * 60 * 30);
 
@@ -92,8 +104,67 @@ exports.forgotPassword = async (req, res) => {
       [user.id, tokenHash, expiresAt]
     );
 
+    const hasTelegram = Boolean(user.telegram_chat_id && process.env.TELEGRAM_BOT_TOKEN);
+    const hasEmail = isEmailConfigured();
+
+    // Lista de canais a tentar, respeitando a preferência se possível
+    const channels = [];
+    if (preferred === 'email') {
+      if (hasEmail) channels.push('email');
+      if (hasTelegram) channels.push('telegram');
+    } else {
+      if (hasTelegram) channels.push('telegram');
+      if (hasEmail) channels.push('email');
+    }
+
+    for (const channel of channels) {
+      if (channel === 'telegram') {
+        const message = [
+          '🔐 *Recuperação de senha — SmartBudget*',
+          '',
+          `Olá${user.name ? `, ${user.name}` : ''}.`,
+          'Use este código no app para definir uma nova senha:',
+          '',
+          `\`${resetToken}\``,
+          '',
+          '⏱ Válido por 30 minutos.',
+          '',
+          '_Se não foi você que solicitou, ignore esta mensagem._',
+        ].join('\n');
+
+        const sent = await sendTelegramMessage(user.telegram_chat_id, message);
+        if (sent) {
+          return res.json({
+            message: 'Enviamos o código de recuperação pelo Telegram.',
+            deliveredVia: 'telegram',
+            availableChannels: { telegram: hasTelegram, email: hasEmail },
+            expiresAt,
+          });
+        }
+      } else if (channel === 'email') {
+        const { text, html } = buildResetPasswordEmail({ name: user.name, code: resetToken });
+        const sent = await sendEmail({
+          to: user.email,
+          subject: 'SmartBudget — Código de recuperação de senha',
+          text,
+          html,
+        });
+        if (sent) {
+          return res.json({
+            message: 'Enviamos o código de recuperação para seu e-mail.',
+            deliveredVia: 'email',
+            availableChannels: { telegram: hasTelegram, email: hasEmail },
+            expiresAt,
+          });
+        }
+      }
+    }
+
+    // Nenhum canal entregou: fallback de tela (apenas para fins de teste)
     return res.json({
       message: 'Código de recuperação gerado. Use-o para definir uma nova senha.',
+      deliveredVia: 'screen',
+      availableChannels: { telegram: hasTelegram, email: hasEmail },
       resetToken,
       expiresAt,
     });

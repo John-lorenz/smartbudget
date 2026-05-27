@@ -5,6 +5,18 @@ function getBotToken() {
   return process.env.TELEGRAM_BOT_TOKEN || '';
 }
 
+// Fetch com timeout para não travar em requisições lentas
+async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    return res;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function sendTelegramMessage(chatId, text) {
   const token = getBotToken();
   if (!token) {
@@ -12,26 +24,46 @@ async function sendTelegramMessage(chatId, text) {
     return false;
   }
 
-  const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text,
-      parse_mode: 'Markdown',
-    }),
-  });
+  const body = JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' });
 
-  if (!response.ok) {
-    const plain = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+  try {
+    const response = await fetchWithTimeout(
+      `https://api.telegram.org/bot${token}/sendMessage`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body },
+      6000
+    );
+
+    if (response.ok) return true;
+
+    // Fallback sem Markdown só quando a primeira tentativa falha (ex.: Markdown malformado)
+    const plain = await fetchWithTimeout(
+      `https://api.telegram.org/bot${token}/sendMessage`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, text }),
+      },
+      6000
+    );
+    return plain.ok;
+  } catch (err) {
+    console.error('Erro ao enviar mensagem Telegram:', err.message);
+    return false;
+  }
+}
+
+function sendTypingAction(chatId) {
+  const token = getBotToken();
+  if (!token) return;
+  fetchWithTimeout(
+    `https://api.telegram.org/bot${token}/sendChatAction`,
+    {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text }),
-    });
-    return plain.ok;
-  }
-
-  return true;
+      body: JSON.stringify({ chat_id: chatId, action: 'typing' }),
+    },
+    3000
+  ).catch(() => {});
 }
 
 async function findUserByChatId(chatId) {
@@ -65,7 +97,7 @@ async function tryLinkAccount(chatId, text) {
   );
 
   if (tokenResult.rows.length === 0) {
-    return 'Código inválido ou expirado. No app, toque em *Vincular Telegram* para gerar um novo link.';
+    return 'Código inválido ou expirado.\n\nNo app, toque em *Vincular Telegram* para gerar um novo link.';
   }
 
   const userId = tokenResult.rows[0].user_id;
@@ -81,19 +113,17 @@ async function tryLinkAccount(chatId, text) {
   }
 
   await pool.query('UPDATE users SET telegram_chat_id = $1 WHERE id = $2', [chatIdStr, userId]);
-  await pool.query(
-    'UPDATE telegram_link_tokens SET used_at = NOW() WHERE token = $1',
-    [token]
-  );
+  await pool.query('UPDATE telegram_link_tokens SET used_at = NOW() WHERE token = $1', [token]);
 
   return [
-    '✅ *Conta vinculada!*',
+    '✅ *Conta vinculada com sucesso!*',
     '',
-    'Agora você pode registrar movimentações direto por aqui.',
+    'Agora você pode registrar movimentações direto aqui.',
     '',
-    'Exemplos:',
+    '*Exemplos rápidos:*',
     '• gastei 45,90 no mercado',
-    '• recebi 3500 salario',
+    '• 35 farmácia',
+    '• recebi 3500 salário',
     '• saldo',
     '',
     'Envie *ajuda* para ver todos os comandos.',
@@ -107,15 +137,20 @@ async function processUpdate(update) {
   const chatId = message.chat.id;
   const text = message.text;
 
+  // Feedback imediato: mostra "digitando..." enquanto consultamos o banco
+  sendTypingAction(chatId);
+
+  // Tentativa de vincular conta
   const linkReply = await tryLinkAccount(chatId, text);
   if (linkReply) {
     await sendTelegramMessage(chatId, linkReply);
     return;
   }
 
+  // /start sem token
   if (/^\/start(?:@\w+)?$/i.test(text.trim())) {
     await sendTelegramMessage(chatId, [
-      'Olá! Eu sou o assistente do *SmartBudget*.',
+      '👋 Olá! Sou o assistente do *SmartBudget*.',
       '',
       'Para começar:',
       '1. Abra o app SmartBudget',
@@ -123,10 +158,9 @@ async function processUpdate(update) {
       '3. Toque em *Vincular Telegram*',
       '4. Volte aqui pelo link que o app abrir',
       '',
-      'Depois de vincular, você pode mandar mensagens como:',
-      '• gastei 45,90 no mercado',
-      '• recebi 3500 salario',
-      '• saldo',
+      'Depois de vincular, experimente:',
+      '• *gastei 45,90 no mercado*',
+      '• *saldo*',
     ].join('\n'));
     return;
   }
@@ -134,7 +168,7 @@ async function processUpdate(update) {
   const user = await findUserByChatId(chatId);
   if (!user) {
     await sendTelegramMessage(chatId, [
-      'Ainda não encontrei sua conta SmartBudget vinculada a este Telegram.',
+      'Sua conta SmartBudget ainda não está vinculada.',
       '',
       'No app: Menu → *Telegram* → *Vincular Telegram*.',
       'Depois toque em *Iniciar* no link aberto pelo app.',
@@ -154,13 +188,20 @@ async function registerWebhook() {
   if (!token || !baseUrl) return false;
 
   const webhookUrl = `${baseUrl.replace(/\/$/, '')}/api/telegram/webhook`;
-  const response = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url: webhookUrl }),
-  });
-
-  return response.ok;
+  try {
+    const response = await fetchWithTimeout(
+      `https://api.telegram.org/bot${token}/setWebhook`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: webhookUrl }),
+      }
+    );
+    return response.ok;
+  } catch (err) {
+    console.error('Erro ao registrar webhook:', err.message);
+    return false;
+  }
 }
 
 module.exports = {
